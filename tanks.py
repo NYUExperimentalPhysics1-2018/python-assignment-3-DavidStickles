@@ -7,10 +7,10 @@ Created on Thu Oct 18 19:18:02 2018
 """
 import numpy as np
 import matplotlib.pyplot as plt
-
 tank1Color = 'b'
 tank2Color = 'r'
 obstacleColor = 'k'
+
 
 ##### functions you need to implement #####
 def trajectory (x0,y0,v,theta,g = 9.8, npts = 1000):
@@ -44,7 +44,14 @@ def trajectory (x0,y0,v,theta,g = 9.8, npts = 1000):
     0.5g t^2 - vsin(theta) t - y0 = 0
     t_final = v/g sin(theta) + sqrt((v/g)^2 sin^2(theta) + 2 y0/g)
     """
-  
+   
+    vx = v*float(np.cos(np.pi/180*theta))
+    vy = v*float(np.sin(np.pi/180*theta))
+    tfinal = (vy/g + ((vy/g)**2-2*y0/g)**.5)*(npts+1)/npts
+    t = np.linspace(0, tfinal, num=npts)
+    x = x0 + vx*t 
+    y = y0+vy*t-.5*g*t**2
+    return x,y
 
 def firstInBox (x,y,box):
     """
@@ -65,6 +72,11 @@ def firstInBox (x,y,box):
         y[j] is in [bottom,top]
         -1 if the line x,y does not go through the box
     """
+    for j in range(0, len(x)):
+        if x[j]>box[0] and x[j]<box[1]:
+            if y[j]>box[2] and y[j]<box[3]:
+                return j
+    return -1
 
 
     
@@ -96,8 +108,26 @@ def tankShot (targetBox, obstacleBox, x0, y0, v, theta, g = 9.8):
     obstacle box
     draws the truncated trajectory in current plot window
     """
+    x,y=trajectory (x0,y0,v,theta,g = 9.8, npts = 1000)
     
-
+    result = firstInBox(x,y,obstacleBox)
+    if result != -1:
+        x,y = endTrajectoryAtIntersection (x,y,obstacleBox)
+        plt.plot(x,y)
+        print("You hit the obstacle!")
+        return 0
+    else:
+        plt.plot(x,y)
+        result = firstInBox(x,y,targetBox)
+        if result != -1:
+            print("You hit the target!")
+            return 1
+        else:
+            print("You missed!")
+            return 0
+    
+    showWindow()
+    
 
 def drawBoard (tank1box, tank2box, obstacleBox, playerNum):
     """
@@ -114,6 +144,11 @@ def drawBoard (tank1box, tank2box, obstacleBox, playerNum):
         1 or 2 -- who's turn it is to shoot
  
     """    
+    drawBox(tank1box, tank1Color)
+    drawBox(tank2box, tank2Color)
+    drawBox(obstacleBox, obstacleColor)
+    plt.xlim(0,100)
+    plt.ylim(0,100)
     #your code here
     
     showWindow() #this makes the figure window show up
@@ -143,7 +178,31 @@ def oneTurn (tank1box, tank2box, obstacleBox, playerNum, g = 9.8):
     displays trajectory (shot originates from center of tank)
     returns 0 for miss, 1 or 2 for victory
     """        
-
+    plt.clf()
+    drawBoard(tank1box, tank2box, obstacleBox, playerNum)
+    prompt = "Please enter a velocity > "
+    v=getNumberInput (prompt, validRange = [-np.Inf, np.Inf])
+    prompt = "Please enter an angle > "
+    theta=getNumberInput (prompt, validRange = [-np.Inf, np.Inf])
+    if playerNum == 1:
+        x0 = (tank1box[0]+tank1box[1])/2
+        y0 = (tank1box[2]+tank1box[3])/2
+        result = tankShot (tank2box, obstacleBox, x0, y0, v, theta, g = 9.8)
+        drawBoard(tank1box, tank2box, obstacleBox, playerNum)
+        if result == 0:
+            return 0
+        if result == 1:
+            return 1
+    if playerNum == 2:
+        x0 = (tank2box[1]+tank2box[0])/2
+        y0 = (tank2box[2]+tank2box[3])/2
+        result = tankShot (tank1box, obstacleBox, x0, y0, v, theta, g = 9.8)
+        drawBoard(tank1box, tank2box, obstacleBox, playerNum)
+        if result == 0:
+            return 0
+        if result == 1:
+            return 2
+    
     
 
 def playGame(tank1box, tank2box, obstacleBox, g = 9.8):
@@ -161,7 +220,24 @@ def playGame(tank1box, tank2box, obstacleBox, g = 9.8):
      g : float 
         accel due to gravity (default 9.8)
     """
-    
+    playerNum = 1
+    while True:
+        if oneTurn (tank1box, tank2box, obstacleBox, playerNum, g = 9.8) == 0:
+            if playerNum == 1:
+                print("Player 2 turn")
+                playerNum = 2
+                input("Hit enter to continue")
+            else:
+                print("Player 1 turn")
+                playerNum = 1
+                input("Hit enter to continue")
+        else:
+            print("Congratulations!")
+            break
+                
+        
+        
+        
     
         
 ##### functions provided to you #####
@@ -245,9 +321,9 @@ def endTrajectoryAtIntersection (x,y,box):
 
 ##### fmain -- edit box locations for new games #####
 def main():
+    obstacleBox = [40,60,0,50]
     tank1box = [10,15,0,5]
     tank2box = [90,95,0,5]
-    obstacleBox = [40,60,0,50]
     playGame(tank1box, tank2box, obstacleBox)
     
 
